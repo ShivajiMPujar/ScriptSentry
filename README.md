@@ -1,4 +1,8 @@
-```text
+Here is the clean, perfectly structured Markdown content. The links and line wraps have been completely cleaned up so they won't spill over into massive single rows on your repository.
+
+Click **"Copy code"**, click the edit pencil icon directly on your GitHub repository's `README.md` file, replace everything with this, and commit changes.
+
+```markdown
 # ScriptSentry: Clinical Safety Multi-Agent Graph Framework
 
 ScriptSentry is an automated clinical safety guardrail system engineered using a **Deterministic Multi-Agent Graph** architecture. Built using Python, it programmatically audits patient prescription combinations for severe drug-to-drug interactions before generating medical intake schedules, ensuring safety is controlled structurally rather than relying on unpredictable LLM prompts.
