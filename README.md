@@ -1,86 +1,72 @@
-```text
 # ScriptSentry: Clinical Safety Multi-Agent Graph Framework
 
-ScriptSentry is an automated clinical safety guardrail system engineered using a **Deterministic Multi-Agent Graph** architecture. Built using Python, it programmatically audits patient prescription combinations for severe drug-to-drug interactions before generating medical intake schedules, ensuring safety is controlled structurally rather than relying on unpredictable LLM prompts.
+ScriptSentry is a decoupled, production-grade full-stack healthcare application designed to audit multi-drug prescriptions for cross-interaction kinetic risks and dynamically generate optimized, safe chronological dosing schedules. 
+
+## 🏗️ System Architecture
+
+The framework relies on a strictly decoupled system layout to enforce clean separation of concerns, simulating real-world distributed enterprise systems.
+
+* **Frontend Client (UI Layer):** Built with **React** and compiled via **Vite**. It manages user triage intake, maintains state transitions via a robust interface, and handles real-time network interactions. Hosted globally on **Vercel**.
+* **Backend Engine (Compute Layer):** Built using **Python** and wrapped in a high-performance **FastAPI** server structure. It utilizes state-based logic flows to ingest data arrays, assess therapeutic conflicts via an indexed drug matrix, and execute schedule optimization. Hosted globally on **Render**.
 
 ---
 
-## Architecture Workflow Diagram
+## 🚀 Core Functional Modules
 
-```text
-       [ Patient Prescription Input ]
-                     │
-                     ▼
-         ┌───────────────────────┐
-         │  Triage Intake Node   │
-         └───────────┬───────────┘
-                     │
-                     ▼
-         ┌───────────────────────┐       Queries       ┌────────────────────────┐
-         │ Pharmacology Audit    ├────────────────────►│ drug_interactions.json │
-         │      (via MCP)        │◄────────────────────┤   (Local Database)     │
-         └───────────┬───────────┘    Local Payload    └────────────────────────┘
-                     │
-                     ▼
-         ┌───────────────────────┐
-         │ Structural Safety     │
-         │        Router         │
-         └─────┬───────────┬─────┘
-               │           │
-     Conflict  │           │  No Conflict
-     Detected  │           │  Detected
-               ▼           ▼
-  ┌───────────────────┐  ┌───────────────────┐
-  │ Strict Alert Node │  │ Schedule Node     │
-  │                   │  │                   │
-  │  [CRITICAL ALERT] │  │ [INTAKE SCHEDULE] │
-  └───────────────────┘  └───────────────────┘
+### 1. Triage Intake Node
+* Captures and validates structural patient data tracking factors (Patient ID, Name).
+* Collects dynamic clinical drug prescription arrays.
 
-```
+### 2. Interaction Matrix Audit Node
+* Ingests the prescription array into the backend via standard JSON protocols over secure networks.
+* Executes vector-based validation checks against an indexed relational database matrix mapping overlapping metabolic pathways and clearance restrictions.
+* Safely blocks immediate hazards (e.g., NSAID/Metformin competitive pathways affecting renal functions).
+
+### 3. Chronological Graph Generator Node
+* When interactions are approved, it dynamically calculates personalized daily dosing timelines.
+* Implements precise interval spacing calculations (e.g., splitting multi-frequency medications into balanced 6/12-hour windows) to mitigate cumulative organ stress.
 
 ---
 
-## System Architecture & Workflow Detail
+## 🛠️ Tech Stack & Dependencies
 
-The framework operates as a strict pipeline to eliminate hallucination risks entirely in clinical settings:
+### Frontend
+* **Core:** React 18+ (Functional Components, Hooks API)
+* **Build Pipeline:** Vite (Fast HMR compilation)
+* **Hosting:** Vercel
 
-1. **Triage Intake Node:** Captures the incoming patient profile data and the requested list of co-prescribed medications.
-2. **Pharmacology Audit Node:** Connects natively via Model Context Protocol (MCP) to query a trusted, structured local interaction registry.
-3. **Structural Safety Router:** Evaluates the audit payload. If a conflict is identified, it instantly hijacks the execution thread and routes to the Alert Node. If clear, it routes to the Schedule Node.
-4. **Output Generation:**
-* **Test Case 1 (High-Risk):** Intercepts Metformin + Ibuprofen, issues a `[CRITICAL ALERT]`, details the renal blood flow mechanism, and hard-refuses schedule generation.
-* **Test Case 2 (Clean):** Validates Metformin + Omeprazole and constructs a safe morning/evening timeline.
-
-
+### Backend
+* **Language:** Python 3.11+
+* **Framework:** FastAPI
+* **Server Engine:** Uvicorn (Asynchronous ASGI server)
+* **Data Transport:** Pydantic (Strong structural data schema validation)
+* **Hosting:** Render
 
 ---
 
-## 🛠️ Local Installation & Verification
+## 💻 Local Setup & Installation
 
-### Prerequisites
-
-* Python 3.10+
-* Git
-
-### Quick Start Commands
-
+### Backend Environment Installation
 ```bash
-# Clone the repository
-git clone [https://github.com/ShivajiMPujar/ScriptSentry.git](https://github.com/ShivajiMPujar/ScriptSentry.git)
-cd ScriptSentry
+# Navigate to the root directory
+cd scriptsentry
 
-# Run the local multi-agent graph simulation
-python app/agent.py
+# Spin up a virtual environment wrapper
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 
-```
+# Install core runtime server dependencies
+pip install -r requirements.txt
 
----
+# Launch the live local Uvicorn development server
+python -m uvicorn server:app --reload --port 8000
 
-## 🏆 Key Innovation Features
+## Frontend Environment Installation
+# Move into the frontend workspace
+cd frontend
 
-* **Zero-Hallucination Guardrails:** Safety rules are deterministic and code-enforced, preventing the AI from misinterpreting critical drug restrictions.
-* **Data Privacy & Cost Efficiency:** Uses a local database connection framework via MCP, securing patient medical data locally without relying on expensive cloud API tokens.
+# Install package dependencies
+npm install
 
-```
-
-```
+# Start the local React compilation build server
+npm run dev
