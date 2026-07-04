@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-// Changed path to explicitly read from the local src folder copy
-import registryData from './drug_interactions.json';
 
 export default function App() {
   const [patientName, setPatientName] = useState('John Doe');
@@ -8,6 +6,7 @@ export default function App() {
   const [selectedMeds, setSelectedMeds] = useState([]);
   const [pipelineLogs, setPipelineLogs] = useState([]);
   const [auditResult, setAuditResult] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const availableDrugs = ["Metformin", "Ibuprofen", "Omeprazole", "Aspirin", "Amoxicillin"];
 
@@ -19,88 +18,50 @@ export default function App() {
     }
   };
 
-  const formatHour = (hr) => {
-    const ampm = hr >= 12 ? 'PM' : 'AM';
-    let displayHr = hr % 12;
-    if (displayHr === 0) displayHr = 12;
-    return `${String(displayHr).padStart(2, '0')}:00 ${ampm}`;
-  };
-
-  const runSafetyAudit = () => {
+  // Crucial Integration Point: Fetching from the Python FastAPI server
+  const runSafetyAudit = async () => {
     if (selectedMeds.length === 0) {
       alert("Please select at least 1 medication to process.");
       return;
     }
 
-    const logs = [
-      { node: "[1. TRIAGE NODE]", text: `Ingesting clinical array for ${patientName} (${patientId})`, type: 'info', icon: '🔄' },
-      { node: "[2. AUDIT NODE]", text: "Checking kinetic pathway conflict vectors...", type: 'info', icon: '🔍' }
-    ];
+    setLoading(true);
+    setPipelineLogs([
+      { node: "[1. NETWORK NODE]", text: "Dispatching payload to Python Core Agent Router...", type: 'info', icon: '🌐' }
+    ]);
 
-    const normalized = selectedMeds.map(m => m.toLowerCase().trim());
-    const registry = registryData.clinical_registry || {};
-    const conflicts = registryData.conflicts || {};
-    
-    let criticalConflict = null;
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/audit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patient_id: patientId,
+          patient_name: patientName,
+          medications: selectedMeds
+        })
+      });
 
-    // Phase 1: Interaction Matrix Audit
-    for (let i = 0; i < normalized.length; i++) {
-      for (let j = i + 1; j < normalized.length; j++) {
-        const m1 = normalized[i];
-        const m2 = normalized[j];
-        if (conflicts[m1] && conflicts[m1][m2]) {
-          criticalConflict = { pair: `${selectedMeds[i]} + ${selectedMeds[j]}`, mechanism: conflicts[m1][m2].mechanism };
-          break;
-        }
+      if (!response.ok) {
+        throw new Error(`Server returned status ${response.status}`);
       }
-      if (criticalConflict) break;
+
+      const data = await response.json();
+      
+      // Update the UI with data computed by Python agents
+      setPipelineLogs(data.logs || []);
+      setAuditResult(data);
+
+    } catch (error) {
+      console.error("API Connection Error:", error);
+      setPipelineLogs([
+        { node: "[🚨 NETWORK ERROR]", text: "Failed to communicate with Python FastAPI backend. Ensure server is running on port 8000.", type: 'error', icon: '❌' }
+      ]);
+      setAuditResult(null);
+    } finally {
+      setLoading(false);
     }
-
-    if (criticalConflict) {
-      logs.push({ node: "[🚨 STRUCTURAL ROUTER]", text: `Refusal state triggered: ${criticalConflict.pair} contains a high-risk safety violation.`, type: 'error', icon: '🛑' });
-      setPipelineLogs(logs);
-      setAuditResult({ status: 'REFUSED', mechanism: criticalConflict.mechanism, pair: criticalConflict.pair });
-      return;
-    }
-
-    // Phase 2: Chrono Graph Generator Node
-    logs.push({ node: "[3. CHRONO GENERATOR]", text: "No absolute blocks found. Building personalized medical timelines...", type: 'success', icon: '📅' });
-    
-    let generatedTimeline = [];
-
-    normalized.forEach((medKey, idx) => {
-      const medName = selectedMeds[idx];
-      const metadata = registry[medKey];
-
-      if (!metadata) {
-        generatedTimeline.push({ name: medName, hourValue: 9, timeString: "09:00 AM", window: "Standard Routine" });
-        return;
-      }
-
-      const freq = metadata.frequency_per_day;
-      const baseHour = metadata.base_hour;
-      const windowNotes = metadata.preferred_window;
-
-      const intervalSpacing = freq === 3 ? 6 : freq === 2 ? 12 : 0;
-
-      for (let doseIdx = 0; doseIdx < freq; doseIdx++) {
-        let calculatedHour = baseHour + (doseIdx * intervalSpacing);
-        if (calculatedHour >= 24) calculatedHour -= 24;
-
-        generatedTimeline.push({
-          name: medName,
-          hourValue: calculatedHour,
-          timeString: formatHour(calculatedHour),
-          window: `${windowNotes} (Dose ${doseIdx + 1}/${freq})`
-        });
-      }
-    });
-
-    // Sort timeline sequentially
-    generatedTimeline.sort((a, b) => a.hourValue - b.hourValue);
-
-    setPipelineLogs(logs);
-    setAuditResult({ status: 'APPROVED', schedule: generatedTimeline });
   };
 
   const COLORS = {
@@ -126,7 +87,7 @@ export default function App() {
           </h1>
         </div>
         <p style={{ color: COLORS.textSecondary, margin: '8px 0 0 0', fontSize: '14px' }}>
-          Deterministic workflow visualization for multi-medication intake audits.
+          Decoupled Full-Stack Architecture — React UI connecting to Python FastAPI State Agents.
         </p>
       </header>
 
@@ -155,8 +116,8 @@ export default function App() {
             </div>
           </div>
           
-          <button onClick={runSafetyAudit} style={{ padding: '14px', backgroundColor: COLORS.accent, color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>
-            Execute Audit Pipeline
+          <button onClick={runSafetyAudit} disabled={loading} style={{ padding: '14px', backgroundColor: loading ? '#3b82f6' : COLORS.accent, color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
+            {loading ? "Routing to Python..." : "Execute Audit Pipeline"}
           </button>
         </section>
 
@@ -165,7 +126,7 @@ export default function App() {
           
           <div style={{ backgroundColor: COLORS.console, padding: '24px', borderRadius: '16px', border: `1px solid ${COLORS.border}`, fontFamily: 'monospace', fontSize: '13px', lineHeight: '1.6' }}>
             <div style={{ color: COLORS.textSecondary, borderBottom: `1px solid ${COLORS.border}`, paddingBottom: '12px', marginBottom: '16px', fontSize: '11px' }}>
-              // Local Graph Engine Trace Logs
+              // Remote Agent Engine Trace Logs
             </div>
             {pipelineLogs.length === 0 && <p style={{ color: '#4b5563', margin: 0, fontStyle: 'italic' }}>Awaiting pipeline execution...</p>}
             
@@ -192,10 +153,10 @@ export default function App() {
               ) : (
                 <div>
                   <h2 style={{ margin: 0, color: COLORS.agentGreen, fontSize: '16px', fontWeight: '800' }}>✅ MEDICAL SCHEDULE GENERATED</h2>
-                  <p style={{ marginTop: '4px', color: COLORS.textSecondary, fontSize: '13px' }}>The multi-agent node has mapped out the daily dosing array timeline with appropriate chronological spacing:</p>
+                  <p style={{ marginTop: '4px', color: COLORS.textSecondary, fontSize: '13px' }}>The Python multi-agent node has mapped out the daily dosing array timeline with appropriate chronological spacing:</p>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
-                    {auditResult.schedule.map((item, index) => (
+                    {auditResult.schedule?.map((item, index) => (
                       <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#070809', padding: '12px 16px', borderRadius: '8px', border: `1px solid ${COLORS.border}` }}>
                         <div>
                           <h3 style={{ color: COLORS.text, fontSize: '15px', margin: 0 }}>{item.name}</h3>
