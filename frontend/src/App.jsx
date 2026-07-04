@@ -31,7 +31,7 @@ export default function App() {
     ]);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/audit', {
+      const response = await fetch('https://scriptsentry-backend.onrender.com/api/audit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
